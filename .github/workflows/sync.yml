@@ -1,0 +1,17 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 每天国际标准时间 0:00（北京时间上午 8:00）自动运行
+  workflow_dispatch: # 允许你在 GitHub 页面上手动点击运行
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 赋予写权限以更新分支
+    steps:
+      - name: Sync upstream
+        run: gh repo sync ${{ github.repository }} --branch main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
