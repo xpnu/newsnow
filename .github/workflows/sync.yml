@@ -2,16 +2,35 @@ name: Sync Fork
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 每天国际标准时间 0:00（北京时间上午 8:00）自动运行
-  workflow_dispatch: # 允许你在 GitHub 页面上手动点击运行
+    # 每月 1 日 0:00 (UTC) 运行一次（约 30 天一次）
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # 依然支持手动点击触发
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 赋予写权限以更新分支
+      contents: write # 必须赋予写入权限
+
     steps:
+      # 第一步：尝试正常同步 upstream 的 main 分支
       - name: Sync upstream
         run: gh repo sync ${{ github.repository }} --branch main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 第二步：拉取仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 第三步：推送到独立的保活分支，重置 60 天倒计时
+      - name: Keep repository active
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          # 创建或切换到独立的保活分支，绝不碰 main 分支
+          git checkout -B keepalive-branch
+          # 产生一个空提交刷新活跃度
+          git commit --allow-empty -m "Chore: keep repository active $(date +'%Y-%m-%d')"
+          # 强制推送到保活分支
+          git push origin keepalive-branch --force
